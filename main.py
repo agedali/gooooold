@@ -1,61 +1,53 @@
 import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from telegram.ext import CallbackContext
-from PIL import Image, ImageDraw, ImageFont
-import io
 
+# بياناتك
 TOKEN = "8376047382:AAEGZxhQuSuqLWIIC240pWgpWOL_Vm0IINs"
-CHAT_ID = "@iq_gold_price"
+CHAT_ID = "@iq_gold_price"   # لازم تخلي @ قبل اسم القناة
 GOLD_API_KEY = "goldapi-durssmemxt19z-io"
 
-async def get_prices():
-    # سعر الذهب بالدولار
-    gold_url = "https://www.goldapi.io/api/XAU/USD"
-    headers = {"x-access-token": GOLD_API_KEY}
-    gold_data = requests.get(gold_url, headers=headers).json()
-    gold_price = gold_data.get("price")
-    
-    # سعر صرف الدولار مقابل الدينار
-    usd_iqd_url = "https://api.exchangerate.host/latest?base=USD&symbols=IQD"
-    usd_iqd_data = requests.get(usd_iqd_url).json()
-    usd_to_iqd = usd_iqd_data.get("rates", {}).get("IQD")
-    
-    if not gold_price or not usd_to_iqd:
-        return None, None, None
-    
-    gold_price_iqd = gold_price * usd_to_iqd
-    return round(gold_price, 2), round(usd_to_iqd, 2), round(gold_price_iqd, 0)
+# دالة لجلب السعر من API
+def get_gold_price():
+    url = "https://www.goldapi.io/api/XAU/USD"
+    headers = {"x-access-token": GOLD_API_KEY, "Content-Type": "application/json"}
+    response = requests.get(url, headers=headers)
 
-def create_image(gold_price_usd, usd_to_iqd, gold_price_iqd):
-    img = Image.new("RGB", (700, 400), color=(20, 20, 20))
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("arial.ttf", 40)
-    text = f"💰 سعر الذهب اليوم\n\n🏅 الأونصة: ${gold_price_usd}\n💵 الدولار: {usd_to_iqd} IQD\n💰 الذهب بالدينار: {gold_price_iqd} IQD"
-    draw.text((50, 100), text, fill=(255, 215, 0), font=font)
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format="PNG")
-    img_bytes.seek(0)
-    return img_bytes
+    if response.status_code == 200:
+        data = response.json()
+        price_usd = data.get("price", "N/A")
+        return price_usd
+    else:
+        return None
 
+# أمر /price
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    gold_price_usd, usd_to_iqd, gold_price_iqd = await get_prices()
-    if not gold_price_usd:
-        await update.message.reply_text("❌ حدث خطأ أثناء جلب الأسعار")
-        return
-    img = create_image(gold_price_usd, usd_to_iqd, gold_price_iqd)
-    await context.bot.send_photo(chat_id=update.effective_chat.id, photo=img)
+    price_usd = get_gold_price()
+    if price_usd:
+        msg = f"💰 سعر الذهب الآن: {price_usd} دولار للأونصة"
+    else:
+        msg = "❌ تعذر جلب السعر حالياً"
+    await update.message.reply_text(msg)
 
-async def send_auto_price(context: CallbackContext):
-    gold_price_usd, usd_to_iqd, gold_price_iqd = await get_prices()
-    if gold_price_usd:
-        img = create_image(gold_price_usd, usd_to_iqd, gold_price_iqd)
-        await context.bot.send_photo(chat_id=CHAT_ID, photo=img)
+# إرسال تلقائي للقناة
+async def send_auto_price(context: ContextTypes.DEFAULT_TYPE):
+    price_usd = get_gold_price()
+    if price_usd:
+        msg = f"🔔 تحديث تلقائي:\n💰 سعر الذهب الآن: {price_usd} دولار للأونصة"
+    else:
+        msg = "❌ تعذر جلب السعر التلقائي"
+    await context.bot.send_message(chat_id=CHAT_ID, text=msg)
 
+# تشغيل البوت
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
+
+    # أمر يدوي
     app.add_handler(CommandHandler("price", price))
-    # التحديث التلقائي كل 30 دقيقة
+
+    # إرسال تلقائي كل 30 دقيقة
     app.job_queue.run_repeating(send_auto_price, interval=1800, first=10)
-    # تشغيل البوت بدون asyncio.run()
+
+    print("✅ Bot started...")
     app.run_polling()
+
