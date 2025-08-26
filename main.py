@@ -1,39 +1,35 @@
 import asyncio
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    CommandHandler,
-    JobQueue,
-)
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, JobQueue
 
+# ضع التوكن هنا
 TOKEN = "8376047382:AAEGZxhQuSuqLWIIC240pWgpWOL_Vm0IINs"
 
-# --- مثال دالة لتشغيل مهمة متكررة ---
+# اي دي القروب
+CHAT_ID = -1002960432716
+
+# دالة لإرسال الرسائل تلقائيًا
 async def send_auto_price(context: ContextTypes.DEFAULT_TYPE):
-    chat_id = "-1002960432716"
-    # مثال: إرسال رسالة ثابتة
-    await context.bot.send_message(chat_id=chat_id, text="سعر الذهب الآن: 1000 USD") 
+    await context.bot.send_message(chat_id=CHAT_ID, text="تحديث تلقائي للأسعار!")
 
-# --- مثال دالة أمر /start ---
+# دالة تستجيب لأوامر البوت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("مرحباً! البوت يعمل بنجاح ✅")
+    await update.message.reply_text("مرحبًا! البوت يعمل الآن ✅")
 
-# --- Main function ---
 async def main():
-    # بناء التطبيق
+    # انشاء التطبيق
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # إضافة Handlers
+    # اضافة Handlers للأوامر
     app.add_handler(CommandHandler("start", start))
 
-    # إعداد JobQueue لتشغيل مهمة كل 30 دقيقة
-    job_queue: JobQueue = app.job_queue
-    job_queue.run_repeating(send_auto_price, interval=1800, first=10)
+    # جدولة الرسائل كل 30 دقيقة
+    app.job_queue.run_repeating(send_auto_price, interval=1800, first=10)
 
-    # تشغيل البوت
+    # بدء البوت
     await app.run_polling()
 
-# --- تشغيل البرنامج ---
+# نقطة البداية
 if __name__ == "__main__":
     asyncio.run(main())
+
