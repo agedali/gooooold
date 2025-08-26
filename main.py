@@ -1,46 +1,50 @@
-import requests
 import asyncio
+import requests
 from telegram import Bot
-from telegram.ext import ApplicationBuilder, JobQueue
+from telegram.ext import ApplicationBuilder, ContextTypes, JobQueue
 
+# إعدادات البوت
 TOKEN = "8376047382:AAEGZxhQuSuqLWIIC240pWgpWOL_Vm0IINs"
-CHAT_ID = -1002960432716  # ضع هنا أي دي القناة أو الشخص
+CHAT_ID = -1002960432716  # أي دي القناة أو الشخص
 
 bot = Bot(TOKEN)
 
-# جلب سعر الدولار بالدينار العراقي
+# دالة لجلب سعر الدولار بالدينار العراقي من مصدر مجاني
 def get_usd_price():
-    url = "https://api.currencyapi.com/v3/latest?apikey=62c744ee99983768f95bc26d14619fb4&base_currency=USD&currencies=IQD"
+    url = "https://api.exchangerate.host/latest?base=USD&symbols=IQD"
     response = requests.get(url).json()
-    return round(response["data"]["IQD"], 2)
+    return round(response["rates"]["IQD"], 2)
 
-# جلب سعر الذهب بالدولار وتحويله إلى الدينار العراقي
+# دالة لجلب سعر الذهب بالغرام بالدينار العراقي من مصدر مجاني
 def get_gold_price():
-    url = "https://metals-api.com/api/latest?access_62c744ee99983768f95bc26d14619fb4&base=USD&symbols=IQD"
-    response = requests.get(url).json()
-    gold_usd_per_gram = 65  # يمكنك تحديث السعر حسب السوق
+    # سعر الذهب بالدولار للغرام (مباشر من موقع مجاني)
+    url = "https://www.goldapi.io/api/XAU/USD"
+    headers = {"x-access-token": "goldapi-demo", "Content-Type": "application/json"}
+    try:
+        response = requests.get(url, headers=headers).json()
+        gold_usd_per_gram = response["price"]  # السعر بالدولار للغرام
+    except:
+        gold_usd_per_gram = 65  # سعر تقديري إذا فشل المصدر
     usd_iqd = get_usd_price()
     return round(gold_usd_per_gram * usd_iqd, 0)
 
-# دالة الإرسال
-async def send_prices(context):
+# دالة إرسال الأسعار
+async def send_prices(context: ContextTypes.DEFAULT_TYPE):
     usd = get_usd_price()
     gold = get_gold_price()
     text = f"سعر الدولار: {usd} د.ع\nسعر الذهب (غرام واحد): {gold} د.ع"
     await bot.send_message(chat_id=CHAT_ID, text=text)
 
-# تشغيل البوت
+# دالة التشغيل
 async def main():
     app = ApplicationBuilder().token(TOKEN).build()
-    job_queue = app.job_queue
-    # إرسال كل ساعة
-    job_queue.run_repeating(send_prices, interval=3600, first=10)
+    job_queue: JobQueue = app.job_queue
+    job_queue.run_repeating(send_prices, interval=3600, first=10)  # كل ساعة
     await app.start()
     await app.updater.start_polling()
     await app.wait_until_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())
-
 
 
