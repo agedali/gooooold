@@ -10,12 +10,14 @@ bot = Bot(TOKEN)
 
 # جلب سعر الدولار بالدينار العراقي
 def get_usd_price():
-    url = "https://api.exchangerate.host/convert?from=USD&to=IQD"
+    url = "https://api.currencyapi.com/v3/latest?apikey=62c744ee99983768f95bc26d14619fb4&base_currency=USD&currencies=IQD"
     response = requests.get(url).json()
-    return round(response["result"], 2)
+    return round(response["data"]["IQD"], 2)
 
 # جلب سعر الذهب بالدولار وتحويله إلى الدينار العراقي
 def get_gold_price():
+    url = "https://metals-api.com/api/latest?access_62c744ee99983768f95bc26d14619fb4&base=USD&symbols=IQD"
+    response = requests.get(url).json()
     gold_usd_per_gram = 65  # يمكنك تحديث السعر حسب السوق
     usd_iqd = get_usd_price()
     return round(gold_usd_per_gram * usd_iqd, 0)
