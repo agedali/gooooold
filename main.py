@@ -6,7 +6,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, JobQu
 TOKEN = "8376047382:AAEGZxhQuSuqLWIIC240pWgpWOL_Vm0IINs"
 
 # اي دي القروب
-CHAT_ID = -1002960432716
+CHAT_ID = "-1002960432716"
 
 # دالة لإرسال الرسائل تلقائيًا
 async def send_auto_price(context: ContextTypes.DEFAULT_TYPE):
@@ -32,4 +32,5 @@ async def main():
 # نقطة البداية
 if __name__ == "__main__":
     asyncio.run(main())
+
 
