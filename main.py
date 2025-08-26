@@ -1,36 +1,44 @@
+import requests
 import asyncio
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, JobQueue
+from telegram import Bot
+from telegram.ext import ApplicationBuilder, JobQueue
 
-# ضع التوكن هنا
 TOKEN = "8376047382:AAEGZxhQuSuqLWIIC240pWgpWOL_Vm0IINs"
+CHAT_ID = -1002960432716  # ضع هنا أي دي القناة أو الشخص
 
-# اي دي القروب
-CHAT_ID = "-1002960432716"
+bot = Bot(TOKEN)
 
-# دالة لإرسال الرسائل تلقائيًا
-async def send_auto_price(context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=CHAT_ID, text="تحديث تلقائي للأسعار!")
+# جلب سعر الدولار بالدينار العراقي
+def get_usd_price():
+    url = "https://api.exchangerate.host/convert?from=USD&to=IQD"
+    response = requests.get(url).json()
+    return round(response["result"], 2)
 
-# دالة تستجيب لأوامر البوت
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("مرحبًا! البوت يعمل الآن ✅")
+# جلب سعر الذهب بالدولار وتحويله إلى الدينار العراقي
+def get_gold_price():
+    gold_usd_per_gram = 65  # يمكنك تحديث السعر حسب السوق
+    usd_iqd = get_usd_price()
+    return round(gold_usd_per_gram * usd_iqd, 0)
 
+# دالة الإرسال
+async def send_prices(context):
+    usd = get_usd_price()
+    gold = get_gold_price()
+    text = f"سعر الدولار: {usd} د.ع\nسعر الذهب (غرام واحد): {gold} د.ع"
+    await bot.send_message(chat_id=CHAT_ID, text=text)
+
+# تشغيل البوت
 async def main():
-    # انشاء التطبيق
     app = ApplicationBuilder().token(TOKEN).build()
+    job_queue = app.job_queue
+    # إرسال كل ساعة
+    job_queue.run_repeating(send_prices, interval=3600, first=10)
+    await app.start()
+    await app.updater.start_polling()
+    await app.wait_until_closed()
 
-    # اضافة Handlers للأوامر
-    app.add_handler(CommandHandler("start", start))
-
-    # جدولة الرسائل كل 30 دقيقة
-    app.job_queue.run_repeating(send_auto_price, interval=1800, first=10)
-
-    # بدء البوت
-    await app.run_polling()
-
-# نقطة البداية
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
